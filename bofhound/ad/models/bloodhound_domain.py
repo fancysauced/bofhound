@@ -15,6 +15,7 @@ class BloodHoundDomain(BloodHoundObject):
         super().__init__(object)
 
         self._entry_type = "Domain"
+        self.GPLinks = []
         level_id = object.get('msds-behavior-version', 0)
         try:
             functional_level = ADUtils.FUNCTIONAL_LEVELS[int(level_id)]
@@ -39,6 +40,14 @@ class BloodHoundDomain(BloodHoundObject):
 
         if 'ntsecuritydescriptor' in object.keys():
             self.RawAces = object['ntsecuritydescriptor']
+        
+        if 'gplink' in object.keys():
+            # this is gross - not sure why gplink is coming in without a colon
+            # (even from logs in test folder) but will hunt down later if it's a problem
+            links = object.get('gplink').replace('LDAP//', 'LDAP://')
+            
+            # [['DN1', 'GPLinkOptions1'], ['DN2', 'GPLinkOptions2'], ...]
+            self.GPLinks = [link.upper()[:-1].split(';') for link in links.split('[LDAP://')][1:]
 
         self.Properties["highvalue"] = True
 
@@ -57,6 +66,7 @@ class BloodHoundDomain(BloodHoundObject):
         }
         self.IsDeleted = False
         self.IsACLProtected = False
+
 
     def to_json(self, only_common_properties=True):
         domain = super().to_json(only_common_properties)

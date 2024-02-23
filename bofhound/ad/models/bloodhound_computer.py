@@ -15,7 +15,8 @@ class BloodHoundComputer(BloodHoundObject):
         'pwdlastset', 'operatingsystem', 'description', 'operatingsystemservicepack',
         'msds-allowedtoactonbehalfofotheridentity', 'ms-mcs-admpwdexpirationtime',
         'domainsid', 'name', 'unconstraineddelegation', 'enabled',
-        'trustedtoauth', 'domain', 'highvalue', 'haslaps', 'serviceprincipalnames'
+        'trustedtoauth', 'domain', 'highvalue', 'haslaps', 'serviceprincipalnames',
+        'memberof'
     ]
 
     def __init__(self, object):
@@ -33,6 +34,7 @@ class BloodHoundComputer(BloodHoundObject):
         self.PrimaryGroupSid = self.get_primary_membership(object) # Returns none if non-existent
         self.sessions = None #['not currently supported by bofhound']
         self.AllowedToDelegate = []
+        self.MemberOfDNs = []
 
         if self.ObjectIdentifier:
             self.Properties['domainsid'] = self.get_domain_sid()
@@ -76,9 +78,6 @@ class BloodHoundComputer(BloodHoundObject):
         # TODO: HighValue / AdminCount
         self.Properties['highvalue'] = False
 
-        if 'distinguishedname' in object.keys():
-            self.Properties['distinguishedname'] = object.get('distinguishedname')
-
         if 'ms-mcs-admpwdexpirationtime' in object.keys():
             self.Properties['haslaps'] = True
 
@@ -105,6 +104,11 @@ class BloodHoundComputer(BloodHoundObject):
 
         if 'ntsecuritydescriptor' in object.keys():
             self.RawAces = object['ntsecuritydescriptor']
+
+        if 'memberof' in object.keys():
+                self.MemberOfDNs = [f'CN={dn.upper()}' for dn in object.get('memberof').split(', CN=')]
+                if len(self.MemberOfDNs) > 0:
+                    self.MemberOfDNs[0] = self.MemberOfDNs[0][3:]
 
 
     def to_json(self, only_common_properties=True):
